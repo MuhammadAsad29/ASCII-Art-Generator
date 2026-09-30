@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ASCII Art Generator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0d1117;
+      --card-bg: #161b22;
+      --border: #30363d;
+      --accent: #58a6ff;
+      --accent-hover: #1f6feb;
+      --text: #c9d1d9;
+      --text-bright: #ffffff;
+      --text-muted: #8b949e;
+      --terminal-bg: #030407;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: 'Outfit', -apple-system, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      padding: 1.2rem 2rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(22, 27, 34, 0.8);
+      backdrop-filter: blur(8px);
+    }
+    header h1 {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--text-bright);
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+    header h1 span { color: var(--accent); }
+    .badge {
+      font-size: 0.75rem;
+      padding: 0.2rem 0.6rem;
+      background: rgba(88, 166, 255, 0.15);
+      color: var(--accent);
+      border-radius: 20px;
+      font-weight: 600;
+    }
+    main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 1.5rem;
+      padding: 1.5rem 2rem;
+      max-width: 1600px;
+      margin: 0 auto;
+      width: 100%;
+    }
+    @media (max-width: 900px) {
+      main { grid-template-columns: 1fr; }
+    }
+    /* Sidebar Controls */
+    .sidebar {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.2rem;
+      height: fit-content;
+    }
+    .dropzone {
+      border: 2px dashed var(--border);
+      border-radius: 8px;
+      padding: 1.5rem 1rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      background: rgba(13, 17, 23, 0.5);
+    }
+    .dropzone:hover, .dropzone.dragover {
+      border-color: var(--accent);
+      background: rgba(88, 166, 255, 0.05);
+    }
+    .dropzone p { font-size: 0.9rem; margin-top: 0.5rem; color: var(--text-muted); }
+    .dropzone img {
+      max-height: 80px;
+      max-width: 100%;
+      border-radius: 4px;
+      margin-top: 0.8rem;
+      display: none;
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+    .form-group label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-bright);
+      display: flex;
+      justify-content: space-between;
+    }
+    .form-group label span { color: var(--accent); font-family: 'JetBrains Mono', monospace; }
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent);
+    }
+    select {
+      background: var(--bg);
+      color: var(--text-bright);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.6rem;
+      font-family: inherit;
+      outline: none;
+    }
+    .toggle-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.2rem 0;
+    }
+    .toggle-row span { font-size: 0.9rem; color: var(--text-bright); }
+    .switch {
+      position: relative;
+      width: 44px;
+      height: 24px;
+    }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+      background-color: var(--border);
+      transition: .3s;
+      border-radius: 24px;
+    }
+    .slider:before {
+      position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px;
+      background-color: white;
+      transition: .3s;
+      border-radius: 50%;
+    }
+    input:checked + .slider { background-color: var(--accent); }
+    input:checked + .slider:before { transform: translateX(20px); }
+    /* Preview Container */
+    .preview-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .preview-toolbar {
+      padding: 0.8rem 1.2rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(13, 17, 23, 0.4);
+    }
+    .preview-toolbar span { font-size: 0.85rem; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
+    .btn-group { display: flex; gap: 0.5rem; }
+    .btn {
+      background: rgba(88, 166, 255, 0.1);
+      color: var(--accent);
+      border: 1px solid rgba(88, 166, 255, 0.3);
+      padding: 0.4rem 0.8rem;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+    .btn:hover {
+      background: var(--accent);
+      color: #000;
+    }
+    .dropdown {
+      position: relative;
+      display: inline-block;
+    }
+    .dropdown-content {
+      display: none;
+      position: absolute;
+      right: 0;
+      top: 110%;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      min-width: 140px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.5);
+      z-index: 100;
+      overflow: hidden;
+    }
+    .dropdown-content button {
+      width: 100%;
+      padding: 0.6rem 0.9rem;
+      background: transparent;
+      border: none;
+      color: var(--text-bright);
+      text-align: left;
+      font-size: 0.8rem;
+      font-family: inherit;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: background 0.15s;
+    }
+    .dropdown-content button:hover {
+      background: rgba(88, 166, 255, 0.15);
+      color: var(--accent);
+    }
+    .dropdown.show .dropdown-content {
+      display: block;
+    }
+    .viewport {
+      flex: 1;
+      padding: 1.5rem;
+      background: var(--terminal-bg);
+      overflow: auto;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 450px;
+    }
+    #ascii-output {
+      font-family: 'JetBrains Mono', monospace;
+      white-space: pre;
+      line-height: 1.1;
+      letter-spacing: 0.05em;
+      font-size: 7px;
+      user-select: all;
+    }
+    .empty-state {
+      color: var(--text-muted);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      min-height: 350px;
+      gap: 0.8rem;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1><span>[&gt;]</span> ASCII Art Studio</h1>
+    <div class="badge">100% Local • Zero-GPU</div>
+  </header>
+
+  <main>
+    <section class="sidebar">
+      <!-- Upload Zone -->
+      <div class="dropzone" id="dropzone">
+        <input type="file" id="file-input" accept="image/*" style="display: none;">
+        <strong>Drop an image here</strong>
+        <p>or click to browse</p>
+        <img id="image-thumb" alt="Preview Thumbnail">
+      </div>
+
+      <!-- Resolution Slider -->
+      <div class="form-group">
+        <label for="width-slider">Resolution Width: <span id="width-val">100</span> chars</label>
+        <input type="range" id="width-slider" min="30" max="220" value="100" step="5">
+      </div>
+
+      <!-- Contrast Slider -->
+      <div class="form-group">
+        <label for="contrast-slider">Contrast: <span id="contrast-val">1.0</span>x</label>
+        <input type="range" id="contrast-slider" min="0.5" max="2.0" value="1.0" step="0.1">
+      </div>
+
+      <!-- Style Selection -->
+      <div class="form-group">
+        <label for="style-select">Glyph Style</label>
+        <select id="style-select">
+          <option value="standard">Standard ( .:-=+*#%@)</option>
+          <option value="detailed">Detailed (70 Shades)</option>
+          <option value="blocks">Block Shades ( ░▒▓█)</option>
+          <option value="binary">Matrix Binary ( 01)</option>
+          <option value="minimal">Minimal ( .#)</option>
+        </select>
+      </div>
+
+      <!-- Invert Colors -->
+      <div class="toggle-row">
+        <span>Invert Brightness</span>
+        <label class="switch">
+          <input type="checkbox" id="invert-check">
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <!-- Color ASCII -->
+      <div class="toggle-row">
+        <span>RGB Color Mode</span>
+        <label class="switch">
+          <input type="checkbox" id="color-check">
+          <span class="slider"></span>
+        </label>
+      </div>
+    </section>
+
+    <!-- Preview Area -->
+    <section class="preview-card">
+      <div class="preview-toolbar">
+        <span id="stats-text">No image loaded</span>
+        <div class="btn-group">
+          <button class="btn" id="btn-copy">📋 Copy Text</button>
+          
+          <div class="dropdown" id="export-dropdown">
+            <button class="btn" id="btn-export-toggle">💾 Download ▾</button>
+            <div class="dropdown-content">
+              <button id="download-txt">📄 Plain Text (.txt)</button>
+              <button id="download-png">🖼️ Image (.png)</button>
+              <button id="download-jpg">🖼️ Image (.jpg)</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="viewport">
+        <div id="ascii-output">
+          <div class="empty-state">
+            <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            <p>Upload a photo on the left to render ASCII art</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    let currentFile = null;
+    let rawTextContent = "";
+    let isColorMode = false;
+
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('file-input');
+    const thumb = document.getElementById('image-thumb');
+    const asciiOutput = document.getElementById('ascii-output');
+    const statsText = document.getElementById('stats-text');
+
+    const widthSlider = document.getElementById('width-slider');
+    const widthVal = document.getElementById('width-val');
+    const contrastSlider = document.getElementById('contrast-slider');
+    const contrastVal = document.getElementById('contrast-val');
+    const styleSelect = document.getElementById('style-select');
+    const invertCheck = document.getElementById('invert-check');
+    const colorCheck = document.getElementById('color-check');
+
+    const exportDropdown = document.getElementById('export-dropdown');
+    const btnExportToggle = document.getElementById('btn-export-toggle');
+
+    // Toggle dropdown
+    btnExportToggle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      exportDropdown.classList.toggle('show');
+    });
+    window.addEventListener('click', () => exportDropdown.classList.remove('show'));
+
+    // Drag and drop events
+    dropzone.addEventListener('click', () => fileInput.click());
+    dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('dragover'); });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+    dropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropzone.classList.remove('dragover');
+      if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+    });
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files.length) handleFile(e.target.files[0]);
+    });
+
+    function handleFile(file) {
+      if (!file.type.startsWith('image/')) return alert('Please upload an image file');
+      currentFile = file;
+      thumb.src = URL.createObjectURL(file);
+      thumb.style.display = 'block';
+      renderASCII();
+    }
+
+    // Slider label sync and debounce render
+    widthSlider.addEventListener('input', () => { widthVal.textContent = widthSlider.value; debounceRender(); });
+    contrastSlider.addEventListener('input', () => { contrastVal.textContent = contrastSlider.value; debounceRender(); });
+    styleSelect.addEventListener('change', renderASCII);
+    invertCheck.addEventListener('change', renderASCII);
+    colorCheck.addEventListener('change', renderASCII);
+
+    let debounceTimer;
+    function debounceRender() {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(renderASCII, 150);
+    }
+
+    async function renderASCII() {
+      if (!currentFile) return;
+      const formData = new FormData();
+      formData.append('image', currentFile);
+      formData.append('width', widthSlider.value);
+      formData.append('contrast', contrastSlider.value);
+      formData.append('style', styleSelect.value);
+      formData.append('invert', invertCheck.checked);
+      formData.append('color_mode', colorCheck.checked);
+
+      statsText.textContent = "Processing...";
+
+      try {
+        const res = await fetch('/convert', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+
+        isColorMode = (data.type === 'html');
+        if (!isColorMode) {
+          rawTextContent = data.content;
+          asciiOutput.textContent = data.content;
+        } else {
+          asciiOutput.innerHTML = data.content;
+          rawTextContent = asciiOutput.innerText;
+        }
+        statsText.textContent = `${data.width} × ${data.height} characters`;
+      } catch (err) {
+        statsText.textContent = "Error processing image";
+        console.error(err);
+      }
+    }
+
+    // Copy to clipboard
+    document.getElementById('btn-copy').addEventListener('click', async () => {
+      if (!rawTextContent) return;
+      await navigator.clipboard.writeText(rawTextContent);
+      const btn = document.getElementById('btn-copy');
+      btn.textContent = "✓ Copied!";
+      setTimeout(() => btn.textContent = "📋 Copy Text", 2000);
+    });
+
+    // Download .txt
+    document.getElementById('download-txt').addEventListener('click', () => {
+      if (!rawTextContent) return;
+      const blob = new Blob([rawTextContent], { type: 'text/plain;charset=utf-8' });
+      triggerDownload(URL.createObjectURL(blob), 'ascii-art.txt');
+    });
+
+    // Download as PNG / JPG using Canvas
+    document.getElementById('download-png').addEventListener('click', () => exportImage('image/png', 'ascii-art.png'));
+    document.getElementById('download-jpg').addEventListener('click', () => exportImage('image/jpeg', 'ascii-art.jpg'));
+
+    function triggerDownload(url, filename) {
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+    }
+
+    function exportImage(format, filename) {
+      if (!rawTextContent) return;
+
+      const lines = rawTextContent.split('\n');
+      const numLines = lines.length;
+      if (numLines === 0) return;
+      const maxCols = Math.max(...lines.map(l => l.length));
+
+      // Font layout metrics
+      const charWidth = 9;
+      const lineHeight = 14;
+      const padding = 20;
+
+      const canvas = document.createElement('canvas');
+      canvas.width = maxCols * charWidth + padding * 2;
+      canvas.height = numLines * lineHeight + padding * 2;
+      const ctx = canvas.getContext('2d');
+
+      // Dark background
+      ctx.fillStyle = "#030407";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.font = `bold 12px 'JetBrains Mono', 'Courier New', monospace`;
+      ctx.textBaseline = "top";
+
+      if (!isColorMode) {
+        // Monochrome export
+        ctx.fillStyle = "#ffffff";
+        for (let y = 0; y < numLines; y++) {
+          ctx.fillText(lines[y], padding, padding + y * lineHeight);
+        }
+      } else {
+        // Color export from HTML spans
+        const spanLines = asciiOutput.innerHTML.split('<br>');
+        for (let y = 0; y < spanLines.length; y++) {
+          const tempDiv = document.createElement('div');
+          tempDiv.innerHTML = spanLines[y];
+          const spans = tempDiv.querySelectorAll('span');
+          let currentX = padding;
+          spans.forEach(span => {
+            ctx.fillStyle = span.style.color || "#ffffff";
+            const char = span.textContent === '\u00A0' ? ' ' : span.textContent;
+            ctx.fillText(char, currentX, padding + y * lineHeight);
+            currentX += charWidth;
+          });
+        }
+      }
+
+      const quality = format === 'image/jpeg' ? 0.95 : 1.0;
+      const dataUrl = canvas.toDataURL(format, quality);
+      triggerDownload(dataUrl, filename);
+    }
+  </script>
+</body>
+</html>
